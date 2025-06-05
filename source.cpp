@@ -8,7 +8,7 @@ extern HDC hdc;
 #define KEY_DOWN(vk_code) ((GetAsyncKeyState(vk_code) & 0x8000) ? 1 : 0)
 
 /*----------------------------------------*/
-/*        МЕТОДЫ КЛАССА Location          */
+/*        РњРµС‚РѕРґС‹ РєР»Р°СЃСЃР° Location          */
 /*----------------------------------------*/
 Location::Location(int InitX, int InitY) { X = InitX; Y = InitY; }
 Location::~Location() {}
@@ -19,7 +19,7 @@ void Location::SetY(int NewY) { Y = NewY; }
 void Location::SetPosition(int NewX, int NewY) { X = NewX; Y = NewY; }
 
 /*----------------------------------------*/
-/*        МЕТОДЫ КЛАССА Point             */
+/*        РњРµС‚РѕРґС‹ РєР»Р°СЃСЃР° Point             */
 /*----------------------------------------*/
 Point::Point(int InitX, int InitY) : Location(InitX, InitY) { Visible = false; }
 Point::~Point() {}
@@ -61,7 +61,23 @@ void Point::Drag(int Step)
 }
 
 /*----------------------------------------*/
-/*        МЕТОДЫ КЛАССА Tank              */
+/*    РџРѕР»РёРјРѕСЂС„РЅР°СЏ С„СѓРЅРєС†РёСЏ РїСЂРѕРІРµСЂРєРё РєРѕР»Р»РёР·РёР№ */
+/*----------------------------------------*/
+void CheckCollisions(Tank* activeTank, IInteractable** objects, int objectCount)
+{
+    if (activeTank->IsDestroyed()) return;
+
+    for (int i = 0; i < objectCount; i++)
+    {
+        if (objects[i]->IsActive() && objects[i]->CheckCollision(activeTank))
+        {
+            objects[i]->OnCollision(activeTank);
+        }
+    }
+}
+
+/*----------------------------------------*/
+/*        РњРµС‚РѕРґС‹ РєР»Р°СЃСЃР° Tank              */
 /*----------------------------------------*/
 Tank::Tank(int InitX, int InitY, int bW, int bH, int tW, int tH, int gL, int trH, int spd)
     : Point(InitX, InitY)
@@ -100,7 +116,7 @@ void Tank::Show()
     Rectangle(hdc, X + bodyWidth / 6, Y, X + bodyWidth - bodyWidth / 6, Y + bodyHeight);
     DeleteObject(brush);
 
-    // Башня (если есть)
+    // Р‘Р°С€РЅСЏ (РµСЃР»Рё РµСЃС‚СЊ)
     if (turretHeight > 0) {
         int turretTop = Y - turretHeight;
         brush = CreateSolidBrush(RGB(0, 80, 0)); SelectObject(hdc, brush);
@@ -108,7 +124,7 @@ void Tank::Show()
                   X + (bodyWidth + turretWidth) / 2, turretTop + turretHeight);
         DeleteObject(brush);
 
-        // ПУШКА из центра башни (если есть)
+        // РЎС‚РІРѕР» РЅР° С†РµРЅС‚СЂРµ Р±Р°С€РЅРё (РµСЃР»Рё РµСЃС‚СЊ)
         if (gunLength > 0) {
             int turretCenterX = X + bodyWidth/2;
             int turretCenterY = turretTop + turretHeight/2;
@@ -121,7 +137,7 @@ void Tank::Show()
         }
     }
 
-    // Колёса/опоры
+    // РљРѕР»РµСЃР°/РіСѓСЃР»Рё
     brush = CreateSolidBrush(RGB(20,20,20)); SelectObject(hdc, brush);
     Ellipse(hdc, X + bodyWidth/6, Y + bodyHeight + trackHeight/4,
         X + bodyWidth/6 + trackHeight/2, Y + bodyHeight + trackHeight - trackHeight/4);
@@ -134,11 +150,18 @@ void Tank::Show()
 void Tank::Hide()
 {
     Visible = false;
-    HPEN blackPen = CreatePen(PS_SOLID, 3, RGB(0, 0, 0));
+    HPEN blackPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
     HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
     SelectObject(hdc, blackPen); SelectObject(hdc, blackBrush);
-    Rectangle(hdc, X - 30, Y - turretHeight - 30,
-        X + bodyWidth + gunLength + 40, Y + bodyHeight + trackHeight + 30);
+
+    // РРЎРџР РђР’Р›Р•РќРР•: РЈС‡РёС‚С‹РІР°РµРј РґР»РёРЅСѓ РїСѓС€РєРё РїСЂРё РѕС‡РёСЃС‚РєРµ
+    int clearWidth = bodyWidth + gunLength + 20;  // Р”РѕР±Р°РІР»СЏРµРј gunLength
+    int clearHeight = bodyHeight + trackHeight + (turretHeight > 0 ? turretHeight : 0) + 10;
+    int clearX = X - 10;  // РќРµР±РѕР»СЊС€РѕР№ РѕС‚СЃС‚СѓРї СЃР»РµРІР°
+    int clearY = Y - (turretHeight > 0 ? turretHeight : 0) - 5;
+
+    Rectangle(hdc, clearX, clearY, clearX + clearWidth, clearY + clearHeight);
+
     DeleteObject(blackBrush); DeleteObject(blackPen);
 }
 void Tank::TakeDamage(int dmg)
@@ -168,12 +191,12 @@ void Tank::Explode()
 
     Hide();
 
-    // Большой взрыв танка
+    // РђРЅРёРјР°С†РёСЏ РІР·СЂС‹РІР°
     HPEN pen = CreatePen(PS_SOLID, 5, RGB(255, 100, 0));
     HBRUSH brush = CreateSolidBrush(RGB(255, 200, 0));
     SelectObject(hdc, pen); SelectObject(hdc, brush);
 
-    // Несколько кругов взрыва
+    // РќРµСЃРєРѕР»СЊРєРѕ РєСЂСѓРіРѕРІ РІР·СЂС‹РІР°
     Ellipse(hdc, X - 60, Y - 60, X + bodyWidth + 60, Y + bodyHeight + 60);
     DeleteObject(brush);
 
@@ -187,7 +210,7 @@ void Tank::Explode()
 
     Sleep(1000);
 
-    // Очистка взрыва
+    // РћС‡РёСЃС‚РєР° РІР·СЂС‹РІР°
     HPEN blackPen = CreatePen(PS_SOLID, 3, RGB(0, 0, 0));
     HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
     SelectObject(hdc, blackPen); SelectObject(hdc, blackBrush);
@@ -212,21 +235,12 @@ HeavyTank::HeavyTank(int InitX, int InitY)
 }
 HeavyTank::~HeavyTank() {}
 
-void HeavyTank::SetTarget(int x, int y)
-{
-    targetX = x;
-    targetY = y;
-}
-
-void HeavyTank::ShowTargetingSystem()
-{
-    // Убрана красная линия наведения
-}
+void HeavyTank::SetTarget(int x, int y) { targetX = x; targetY = y; }
+void HeavyTank::ShowTargetingSystem() {}
 
 void HeavyTank::Show()
 {
     if (isDestroyed) return;
-
     HPEN pen = CreatePen(PS_SOLID, 3, RGB(50, 0, 0));
     HBRUSH brush = CreateSolidBrush(RGB(100, 50, 50));
     SelectObject(hdc, pen); SelectObject(hdc, brush);
@@ -235,42 +249,32 @@ void HeavyTank::Show()
     brush = CreateSolidBrush(RGB(90, 30, 30)); SelectObject(hdc, brush);
     Rectangle(hdc, X + bodyWidth / 6, Y, X + bodyWidth - bodyWidth / 6, Y + bodyHeight);
     DeleteObject(brush);
-
     int turretTop = Y - turretHeight;
     brush = CreateSolidBrush(RGB(80, 20, 20)); SelectObject(hdc, brush);
     Rectangle(hdc, X + (bodyWidth - turretWidth)/2, turretTop,
               X + (bodyWidth + turretWidth)/2, turretTop + turretHeight);
     DeleteObject(brush);
-
-    // Артиллерийская установка направлена ВВЕРХ
     int turretCenterX = X + bodyWidth/2;
     int turretCenterY = turretTop + turretHeight/2;
-
-    // Основная артиллерийская пушка - направлена вверх под углом 45 градусов
-    double artilleryAngle = -M_PI/4; // -45 градусов (вверх и вправо)
+    double artilleryAngle = -M_PI/4; // -45 РіСЂР°РґСѓСЃРѕРІ
     int gunEndX = turretCenterX + (int)(gunLength * cos(artilleryAngle));
     int gunEndY = turretCenterY + (int)(gunLength * sin(artilleryAngle));
-
     HPEN gunPen = CreatePen(PS_SOLID, 12, RGB(110, 60, 60));
     SelectObject(hdc, gunPen);
     MoveToEx(hdc, turretCenterX, turretCenterY, NULL);
     LineTo(hdc, gunEndX, gunEndY);
     DeleteObject(gunPen);
-
-    // Артиллерийские направляющие
     HPEN rocketPen = CreatePen(PS_SOLID, 6, RGB(120, 120, 120));
     SelectObject(hdc, rocketPen);
     int offsetY = 25;
     int rocketEndX = turretCenterX + (int)((gunLength - 40) * cos(artilleryAngle));
     int rocketEndY1 = turretCenterY + (int)((gunLength - 40) * sin(artilleryAngle)) - offsetY;
     int rocketEndY2 = turretCenterY + (int)((gunLength - 40) * sin(artilleryAngle)) + offsetY;
-
     MoveToEx(hdc, turretCenterX, turretCenterY - offsetY, NULL);
     LineTo(hdc, rocketEndX, rocketEndY1);
     MoveToEx(hdc, turretCenterX, turretCenterY + offsetY, NULL);
     LineTo(hdc, rocketEndX, rocketEndY2);
     DeleteObject(rocketPen);
-
     brush = CreateSolidBrush(RGB(40,20,20)); SelectObject(hdc, brush);
     Ellipse(hdc, X + bodyWidth/6, Y + bodyHeight + trackHeight/4,
         X + bodyWidth/6 + trackHeight/2, Y + bodyHeight + trackHeight - trackHeight/4);
@@ -280,11 +284,41 @@ void HeavyTank::Show()
         X + bodyWidth - bodyWidth/6, Y + bodyHeight + trackHeight - trackHeight/4);
     DeleteObject(brush); DeleteObject(pen);
 }
+
+// РСЃРїСЂР°РІР»РµРЅРЅС‹Р№ Hide РґР»СЏ HeavyTank СЃ РѕС‡РёСЃС‚РєРѕР№ РґРёР°РіРѕРЅР°Р»СЊРЅРѕР№ РїСѓС€РєРё!
+void HeavyTank::Hide()
+{
+    Visible = false;
+    HPEN blackPen = CreatePen(PS_SOLID, 1, RGB(0, 0, 0));
+    HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
+    SelectObject(hdc, blackPen); SelectObject(hdc, blackBrush);
+
+    // 1. РљРѕСЂРїСѓСЃ + Р±Р°С€РЅСЏ + РіСѓСЃРµРЅРёС†С‹
+    int clearWidth = bodyWidth + 20;
+    int clearHeight = bodyHeight + trackHeight + turretHeight + 20;
+    int clearX = X - 10;
+    int clearY = Y - turretHeight - 10;
+    Rectangle(hdc, clearX, clearY, clearX + clearWidth, clearY + clearHeight);
+
+    // 2. Р”РёР°РіРѕРЅР°Р»СЊРЅР°СЏ РѕСЃРЅРѕРІРЅР°СЏ РїСѓС€РєР° (С€РёСЂРѕРєРёР№ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє)
+    int turretCenterX = X + bodyWidth/2;
+    int turretCenterY = (Y - turretHeight) + turretHeight/2;
+    double artilleryAngle = -M_PI/4;
+    int gunEndX = turretCenterX + (int)(gunLength * cos(artilleryAngle));
+    int gunEndY = turretCenterY + (int)(gunLength * sin(artilleryAngle));
+    int left = min(turretCenterX, gunEndX) - 20;
+    int top = min(turretCenterY, gunEndY) - 20;
+    int right = max(turretCenterX, gunEndX) + 20;
+    int bottom = max(turretCenterY, gunEndY) + 20;
+    Rectangle(hdc, left, top, right, bottom);
+
+    DeleteObject(blackBrush); DeleteObject(blackPen);
+}
+
 void HeavyTank::TakeDamage(int dmg)
 {
     if (isDestroyed) return;
-
-    health -= dmg / 2; // повышенная защита
+    health -= dmg / 2; // РЈСЃРёР»РµРЅРЅР°СЏ Р±СЂРѕРЅСЏ
     cout << "Heavy Tank took " << (dmg/2) << " damage (armor reduced)! Health: " << health << endl;
     if (health <= 0) {
         health = 0;
@@ -309,12 +343,12 @@ void LightTank::Show()
     Rectangle(hdc, X, Y + bodyHeight, X + bodyWidth, Y + bodyHeight + trackHeight);
     DeleteObject(brush);
 
-    // Корпус без башни - более обтекаемый, БЕЗ ПУШКИ
+    // РљРѕСЂРїСѓСЃ Р±РµР· Р±Р°С€РЅРё - Р»РµРіРєР°СЏ СЂР°Р·РІРµРґРєР°, Р±РµР· С‚СЏР¶РµР»С‹С…
     brush = CreateSolidBrush(RGB(80, 80, 180)); SelectObject(hdc, brush);
     Rectangle(hdc, X + bodyWidth / 8, Y, X + bodyWidth - bodyWidth / 8, Y + bodyHeight);
     DeleteObject(brush);
 
-    // Меньше колес для легкости
+    // РўРѕР»СЊРєРѕ РєРѕР»РµСЃР° Р±РµР· РѕСЂСѓРґРёСЏ
     brush = CreateSolidBrush(RGB(60,60,100)); SelectObject(hdc, brush);
     Ellipse(hdc, X + bodyWidth/4, Y + bodyHeight + trackHeight/4,
         X + bodyWidth/4 + trackHeight/2, Y + bodyHeight + trackHeight - trackHeight/4);
@@ -326,7 +360,7 @@ void LightTank::TakeDamage(int dmg)
 {
     if (isDestroyed) return;
 
-    health -= dmg * 2; // слабая защита
+    health -= dmg * 2; // РЎР»Р°Р±Р°СЏ Р±СЂРѕРЅСЏ
     cout << "Light Tank took " << (dmg*2) << " damage (weak armor)! Health: " << health << endl;
     if (health <= 0) {
         health = 0;
@@ -360,21 +394,21 @@ void DamageTank::Show()
               X + (bodyWidth + turretWidth)/2, turretTop + turretHeight);
     DeleteObject(brush);
 
-    // Двойные пулеметы на башне
+    // РўСЂРѕР№РЅР°СЏ РїСѓС€РµС‡РЅР°СЏ РЅР° Р±Р°С€РЅРµ
     int turretCenterX = X + bodyWidth/2;
     int turretCenterY = turretTop + turretHeight/2;
 
-    // Верхний пулемет
+    // Р’РµСЂС…РЅРёР№ РїСѓР»РµРјРµС‚
     brush = CreateSolidBrush(RGB(220, 200, 40)); SelectObject(hdc, brush);
     Rectangle(hdc, turretCenterX, turretCenterY - 20,
               turretCenterX + gunLength, turretCenterY - 12);
 
-    // Нижний пулемет
+    // РќРёР¶РЅРёР№ РїСѓР»РµРјРµС‚
     Rectangle(hdc, turretCenterX, turretCenterY + 12,
               turretCenterX + gunLength, turretCenterY + 20);
     DeleteObject(brush);
 
-    // Основная пушка по центру
+    // РћСЃРЅРѕРІРЅРѕР№ СЃС‚РІРѕР» РїРѕ С†РµРЅС‚СЂСѓ
     brush = CreateSolidBrush(RGB(200, 180, 20)); SelectObject(hdc, brush);
     Rectangle(hdc, turretCenterX, turretCenterY - 6,
               turretCenterX + gunLength + 20, turretCenterY + 6);
@@ -401,11 +435,13 @@ void DamageTank::TakeDamage(int dmg)
     }
 }
 
-/*-------------------- Остальные классы без констант ---------------------*/
+/*----------------------------------------*/
+/*          Rocket - РЅР°СЃР»РµРґСѓРµС‚СЃСЏ РѕС‚ Tank   */
+/*----------------------------------------*/
 Rocket::Rocket(int InitX, int InitY, int targetX, int targetY, int pwr, int w, int h, int spd)
-    : Point(InitX, InitY), power(pwr), isActive(true), width(w), height(h), speed(spd)
+    : Tank(InitX, InitY, w, h, 0, 0, 0, 0, spd), power(pwr), isActive(true), targetX(targetX), targetY(targetY)
 {
-    // Вычисляем направление к цели
+    // Р’С‹С‡РёСЃР»СЏРµРј РЅР°РїСЂР°РІР»РµРЅРёРµ Рє С†РµР»Рё
     int deltaX = targetX - InitX;
     int deltaY = targetY - InitY;
     double distance = sqrt(deltaX * deltaX + deltaY * deltaY);
@@ -428,13 +464,13 @@ void Rocket::Show()
     HPEN penBody = CreatePen(PS_SOLID, 3, RGB(255, 100, 0));
     HBRUSH brushBody = CreateSolidBrush(RGB(255, 200, 0));
     SelectObject(hdc, penBody); SelectObject(hdc, brushBody);
-    Ellipse(hdc, X - width/2, Y - height/2, X + width/2, Y + height/2);
+    Ellipse(hdc, X - bodyWidth/2, Y - bodyHeight/2, X + bodyWidth/2, Y + bodyHeight/2);
     DeleteObject(brushBody); DeleteObject(penBody);
 
-    // Хвост ракеты
+    // РҐРІРѕСЃС‚ СЂР°РєРµС‚С‹
     HPEN penTail = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));
     SelectObject(hdc, penTail);
-    MoveToEx(hdc, X - width/2, Y, NULL); LineTo(hdc, X - width, Y);
+    MoveToEx(hdc, X - bodyWidth/2, Y, NULL); LineTo(hdc, X - bodyWidth, Y);
     DeleteObject(penTail);
 }
 
@@ -446,7 +482,7 @@ void Rocket::Hide()
     HPEN blackPen = CreatePen(PS_SOLID, 3, RGB(0, 0, 0));
     HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
     SelectObject(hdc, blackPen); SelectObject(hdc, blackBrush);
-    Rectangle(hdc, X - width, Y - height, X + width, Y + height);
+    Rectangle(hdc, X - bodyWidth, Y - bodyHeight, X + bodyWidth, Y + bodyHeight);
     DeleteObject(blackBrush); DeleteObject(blackPen);
 }
 
@@ -458,6 +494,31 @@ void Rocket::MoveTo(int NewX, int NewY)
     Show();
 }
 
+bool Rocket::CheckCollision(Tank* tank)
+{
+    if (!isActive || tank->IsDestroyed() || tank == this) return false;
+
+    int tankCenterX = tank->GetX() + tank->GetBodyWidth() / 2;
+    int tankCenterY = tank->GetY() + tank->GetBodyHeight() / 2;
+    int distance = sqrt((tankCenterX - X) * (tankCenterX - X) + (tankCenterY - Y) * (tankCenterY - Y));
+    return distance < 60;
+}
+
+void Rocket::OnCollision(Tank* tank)
+{
+    cout << "ROCKET HIT! Tank took " << power << " damage!" << endl;
+    tank->TakeDamage(power);
+    Deactivate();
+
+    // РђРЅРёРјР°С†РёСЏ РІР·СЂС‹РІР°
+    HPEN pen = CreatePen(PS_SOLID, 5, RGB(255, 255, 0));
+    HBRUSH brush = CreateSolidBrush(RGB(255, 150, 0));
+    SelectObject(hdc, pen); SelectObject(hdc, brush);
+    Ellipse(hdc, X - 40, Y - 40, X + 40, Y + 40);
+    DeleteObject(brush); DeleteObject(pen);
+    Sleep(300);
+}
+
 void Rocket::MoveToTarget()
 {
     if (!isActive) return;
@@ -465,23 +526,13 @@ void Rocket::MoveToTarget()
     int newX = X + directionX;
     int newY = Y + directionY;
 
-    // Проверяем границы экрана
+    // РџСЂРѕРІРµСЂРєР° РіСЂР°РЅРёС† СЌРєСЂР°РЅР°
     if (newX < 0 || newX > 2000 || newY < 0 || newY > 1200) {
         Deactivate();
         return;
     }
 
     MoveTo(newX, newY);
-}
-
-bool Rocket::CheckCollision(Tank* t)
-{
-    if (!isActive || t->IsDestroyed()) return false;
-
-    int tankCenterX = t->GetX() + t->GetBodyWidth() / 2;
-    int tankCenterY = t->GetY() + t->GetBodyHeight() / 2;
-    int distance = sqrt((tankCenterX - X) * (tankCenterX - X) + (tankCenterY - Y) * (tankCenterY - Y));
-    return distance < 60;
 }
 
 void Rocket::Deactivate()
@@ -491,10 +542,12 @@ void Rocket::Deactivate()
 }
 
 int Rocket::GetPower() const { return power; }
-bool Rocket::IsActive() const { return isActive; }
 
+/*----------------------------------------*/
+/*          Mina - РЅР°СЃР»РµРґСѓРµС‚СЃСЏ РѕС‚ Tank     */
+/*----------------------------------------*/
 Mina::Mina(int InitX, int InitY, int dmg, int w, int h)
-    : Point(InitX, InitY), damage(dmg), isExploded(false), width(w), height(h) {}
+    : Tank(InitX, InitY, w, h, 0, 0, 0, 0, 0), damage(dmg), isExploded(false) {}
 Mina::~Mina() {}
 
 void Mina::Show()
@@ -505,14 +558,14 @@ void Mina::Show()
     HPEN pen = CreatePen(PS_SOLID, 2, RGB(50, 50, 50));
     HBRUSH brush = CreateSolidBrush(RGB(100, 100, 100));
     SelectObject(hdc, pen); SelectObject(hdc, brush);
-    Ellipse(hdc, X - width/2, Y - height/2, X + width/2, Y + height/2);
+    Ellipse(hdc, X - bodyWidth/2, Y - bodyHeight/2, X + bodyWidth/2, Y + bodyHeight/2);
     DeleteObject(brush);
 
-    // Шипы мины
-    MoveToEx(hdc, X - width/2, Y, NULL); LineTo(hdc, X - width/2 - 5, Y);
-    MoveToEx(hdc, X + width/2, Y, NULL); LineTo(hdc, X + width/2 + 5, Y);
-    MoveToEx(hdc, X, Y - height/2, NULL); LineTo(hdc, X, Y - height/2 - 5);
-    MoveToEx(hdc, X, Y + height/2, NULL); LineTo(hdc, X, Y + height/2 + 5);
+    // РЁРёРїС‹ РјРёРЅС‹
+    MoveToEx(hdc, X - bodyWidth/2, Y, NULL); LineTo(hdc, X - bodyWidth/2 - 5, Y);
+    MoveToEx(hdc, X + bodyWidth/2, Y, NULL); LineTo(hdc, X + bodyWidth/2 + 5, Y);
+    MoveToEx(hdc, X, Y - bodyHeight/2, NULL); LineTo(hdc, X, Y - bodyHeight/2 - 5);
+    MoveToEx(hdc, X, Y + bodyHeight/2, NULL); LineTo(hdc, X, Y + bodyHeight/2 + 5);
 
     DeleteObject(pen);
 }
@@ -523,18 +576,25 @@ void Mina::Hide()
     HPEN blackPen = CreatePen(PS_SOLID, 3, RGB(0, 0, 0));
     HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
     SelectObject(hdc, blackPen); SelectObject(hdc, blackBrush);
-    Rectangle(hdc, X - width, Y - height, X + width, Y + height);
+    Rectangle(hdc, X - bodyWidth, Y - bodyHeight, X + bodyWidth, Y + bodyHeight);
     DeleteObject(blackBrush); DeleteObject(blackPen);
 }
 
-bool Mina::CheckCollision(Tank* t)
+bool Mina::CheckCollision(Tank* tank)
 {
-    if (isExploded || t->IsDestroyed()) return false;
+    if (isExploded || tank->IsDestroyed() || tank == this) return false;
 
-    int tankCenterX = t->GetX() + t->GetBodyWidth() / 2;
-    int tankCenterY = t->GetY() + t->GetBodyHeight() / 2;
+    int tankCenterX = tank->GetX() + tank->GetBodyWidth() / 2;
+    int tankCenterY = tank->GetY() + tank->GetBodyHeight() / 2;
     int distance = sqrt((tankCenterX - X) * (tankCenterX - X) + (tankCenterY - Y) * (tankCenterY - Y));
     return distance < 40;
+}
+
+void Mina::OnCollision(Tank* tank)
+{
+    cout << "BOOM! Tank hit a mine!" << endl;
+    tank->TakeDamage(damage);
+    Explode();
 }
 
 void Mina::Explode()
@@ -542,7 +602,7 @@ void Mina::Explode()
     if (isExploded) return;
 
     Hide();
-    // Анимация взрыва
+    // РђРЅРёРјР°С†РёСЏ РІР·СЂС‹РІР°
     HPEN pen = CreatePen(PS_SOLID, 3, RGB(255, 255, 0));
     HBRUSH brush = CreateSolidBrush(RGB(255, 100, 0));
     SelectObject(hdc, pen); SelectObject(hdc, brush);
@@ -550,7 +610,7 @@ void Mina::Explode()
     DeleteObject(brush); DeleteObject(pen);
     Sleep(500);
 
-    // Очистка взрыва
+    // РћС‡РёСЃС‚РєР° РІР·СЂС‹РІР°
     HPEN blackPen = CreatePen(PS_SOLID, 3, RGB(0, 0, 0));
     HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
     SelectObject(hdc, blackPen); SelectObject(hdc, blackBrush);
@@ -563,8 +623,11 @@ void Mina::Explode()
 int Mina::GetDamage() const { return damage; }
 bool Mina::IsExploded() const { return isExploded; }
 
+/*----------------------------------------*/
+/*        Remont - РЅР°СЃР»РµРґСѓРµС‚СЃСЏ РѕС‚ Tank     */
+/*----------------------------------------*/
 Remont::Remont(int InitX, int InitY, int heal, int w, int h)
-    : Point(InitX, InitY), healAmount(heal), isUsed(false), width(w), height(h) {}
+    : Tank(InitX, InitY, w, h, 0, 0, 0, 0, 0), healAmount(heal), isUsed(false) {}
 Remont::~Remont() {}
 
 void Remont::Show()
@@ -573,15 +636,15 @@ void Remont::Show()
 
     Visible = true;
 
-    // Зеленый прямоугольник
+    // Р—РµР»РµРЅС‹Р№ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє
     HPEN pen = CreatePen(PS_SOLID, 2, RGB(0, 100, 0));
     HBRUSH brush = CreateSolidBrush(RGB(0, 200, 0));
     SelectObject(hdc, pen); SelectObject(hdc, brush);
-    Rectangle(hdc, X - width/2, Y - height/2,
-              X + width/2, Y + height/2);
+    Rectangle(hdc, X - bodyWidth/2, Y - bodyHeight/2,
+              X + bodyWidth/2, Y + bodyHeight/2);
     DeleteObject(brush);
 
-    // Буква H
+    // РЎРёРјРІРѕР» H
     pen = CreatePen(PS_SOLID, 3, RGB(255, 255, 255));
     SelectObject(hdc, pen);
     MoveToEx(hdc, X - 10, Y - 10, NULL); LineTo(hdc, X - 10, Y + 10);
@@ -597,18 +660,24 @@ void Remont::Hide()
     HPEN blackPen = CreatePen(PS_SOLID, 3, RGB(0, 0, 0));
     HBRUSH blackBrush = CreateSolidBrush(RGB(0, 0, 0));
     SelectObject(hdc, blackPen); SelectObject(hdc, blackBrush);
-    Rectangle(hdc, X - width, Y - height,
-              X + width, Y + height);
+    Rectangle(hdc, X - bodyWidth, Y - bodyHeight,
+              X + bodyWidth, Y + bodyHeight);
     DeleteObject(blackBrush); DeleteObject(blackPen);
 }
 
-bool Remont::CheckCollision(Tank* t)
+bool Remont::CheckCollision(Tank* tank)
 {
-    if (isUsed || t->IsDestroyed()) return false;
+    if (isUsed || tank->IsDestroyed() || tank == this) return false;
 
-    int tankCenterX = t->GetX() + t->GetBodyWidth() / 2;
-    int tankCenterY = t->GetY() + t->GetBodyHeight() / 2;
+    int tankCenterX = tank->GetX() + tank->GetBodyWidth() / 2;
+    int tankCenterY = tank->GetY() + tank->GetBodyHeight() / 2;
     return (abs(tankCenterX - X) < 50 && abs(tankCenterY - Y) < 40);
+}
+
+void Remont::OnCollision(Tank* tank)
+{
+    tank->Heal(healAmount);
+    Use();
 }
 
 void Remont::Use()
