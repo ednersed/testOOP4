@@ -26,7 +26,16 @@ public:
     virtual void Drag(int Step);
 };
 
-class Tank : public Point {
+// Базовый интерфейс для объектов, способных взаимодействовать
+class IInteractable {
+public:
+    virtual ~IInteractable() = default;
+    virtual bool CheckCollision(class Tank* tank) = 0;
+    virtual void OnCollision(Tank* tank) = 0;
+    virtual bool IsActive() const = 0;
+};
+
+class Tank : public Point, public IInteractable {
 protected:
     int bodyWidth, bodyHeight, turretWidth, turretHeight;
     int gunLength, trackHeight;
@@ -42,6 +51,12 @@ public:
     virtual void TakeDamage(int dmg);
     void Heal(int amount);
     void Explode();
+
+    // Реализация IInteractable для базового танка (танки не взаимодействуют друг с другом)
+    virtual bool CheckCollision(Tank* tank) override { return false; }
+    virtual void OnCollision(Tank* tank) override {}
+    virtual bool IsActive() const override { return !isDestroyed; }
+
     int GetHealth() const;
     int GetSpeed() const;
     int GetBodyWidth() const;
@@ -56,6 +71,7 @@ public:
     HeavyTank(int InitX, int InitY);
     ~HeavyTank();
     void Show() override;
+    void Hide() override;
     virtual void TakeDamage(int dmg);
     void SetTarget(int x, int y);
     void ShowTargetingSystem();
@@ -77,53 +93,71 @@ public:
     virtual void TakeDamage(int dmg);
 };
 
-class Rocket : public Point {
+// Ракета наследуется от Tank и реализует взаимодействие
+class Rocket : public Tank {
 private:
     int power;
     int directionX, directionY;
     bool isActive;
-    int width, height, speed;
+    int targetX, targetY;
 public:
     Rocket(int InitX, int InitY, int targetX, int targetY, int pwr, int w = 36, int h = 12, int spd = 15);
     ~Rocket();
-    virtual void Show();
-    virtual void Hide();
-    virtual void MoveTo(int NewX, int NewY);
-    bool CheckCollision(Tank* t);
+    virtual void Show() override;
+    virtual void Hide() override;
+    virtual void MoveTo(int NewX, int NewY) override;
+
+    // Реализация IInteractable
+    virtual bool CheckCollision(Tank* tank) override;
+    virtual void OnCollision(Tank* tank) override;
+    virtual bool IsActive() const override { return isActive; }
+
     void MoveToTarget();
     int GetPower() const;
-    bool IsActive() const;
     void Deactivate();
 };
 
-class Mina : public Point {
+// Мина наследуется от Tank и реализует взаимодействие
+class Mina : public Tank {
 private:
     int damage;
     bool isExploded;
-    int width, height;
 public:
     Mina(int InitX, int InitY, int dmg = 50, int w = 20, int h = 20);
     ~Mina();
-    virtual void Show();
-    virtual void Hide();
-    bool CheckCollision(Tank* t);
+    virtual void Show() override;
+    virtual void Hide() override;
+
+    // Реализация IInteractable
+    virtual bool CheckCollision(Tank* tank) override;
+    virtual void OnCollision(Tank* tank) override;
+    virtual bool IsActive() const override { return !isExploded; }
+
     void Explode();
     int GetDamage() const;
     bool IsExploded() const;
 };
 
-class Remont : public Point {
+// Ремонтный комплект наследуется от Tank и реализует взаимодействие
+class Remont : public Tank {
 private:
     int healAmount;
     bool isUsed;
-    int width, height;
 public:
     Remont(int InitX, int InitY, int heal = 30, int w = 40, int h = 30);
     ~Remont();
-    virtual void Show();
-    virtual void Hide();
-    bool CheckCollision(Tank* t);
+    virtual void Show() override;
+    virtual void Hide() override;
+
+    // Реализация IInteractable
+    virtual bool CheckCollision(Tank* tank) override;
+    virtual void OnCollision(Tank* tank) override;
+    virtual bool IsActive() const override { return !isUsed; }
+
     void Use();
     int GetHealAmount() const;
     bool IsUsed() const;
 };
+
+// Универсальная функция проверки коллизий с использованием полиморфизма
+void CheckCollisions(Tank* activeTank, IInteractable** objects, int objectCount);
